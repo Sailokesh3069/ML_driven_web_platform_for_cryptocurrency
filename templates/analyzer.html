@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Trade Pattern Analyzer</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+    /* --- 1. THEME & GLOBAL STYLES (MATCHES DASHBOARD) --- */
+    :root {
+        --background-dark: #0d1117;
+        --background-light: #161b22;
+        --background-card: #21262d;
+        --text-primary: #e6edf3;
+        --text-secondary: #8b949e;
+        --accent-color: #238636;
+        --accent-hover: #2ea043;
+        --border-color: #30363d;
+        --success-color: #2ECC71;
+        --danger-color: #E74C3C;
+        --warning-color: #F39C12;
+    }
+
+    body, html {
+        margin: 0; padding: 0;
+        font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        background-color: var(--background-dark);
+        color: var(--text-primary);
+        height: 100%;
+        overflow: hidden;
+    }
+
+    /* --- 2. LAYOUT & SIDEBAR --- */
+    .dashboard-wrapper { display: flex; height: 100vh; }
+    .sidebar { width: 240px; background-color: var(--background-light); padding: 25px 15px; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; flex-shrink: 0; }
+    .sidebar h2 { font-size: 20px; margin: 0 0 30px 0; text-align: center; color: var(--text-primary); font-weight: 600; }
+    .sidebar ul { list-style: none; padding: 0; margin: 0; flex-grow: 1; }
+    .sidebar a { color: var(--text-secondary); text-decoration: none; font-weight: 500; display: flex; align-items: center; gap: 12px; padding: 12px 15px; border-radius: 8px; transition: all 0.2s ease; }
+    .sidebar a:hover { background-color: #30363d; color: var(--text-primary); }
+    .sidebar a.active { background-color: var(--accent-color); color: white; font-weight: 600; }
+    
+    .main-area { flex: 1; display: flex; flex-direction: column; padding: 25px 35px; overflow-y: auto; height: 100vh; }
+
+    /* --- 3. UI COMPONENTS --- */
+    .flash { padding: 12px 15px; margin-bottom: 20px; border-radius: 8px; font-weight: 600; flex-shrink: 0; }
+    .content-section { background-color: var(--background-card); padding: 30px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.2); margin-bottom: 30px; }
+    
+    h1 { color: var(--text-primary); font-size: 26px; margin-top: 0; margin-bottom: 10px; font-weight: 600; }
+    h2 { color: var(--text-primary); font-size: 22px; border-bottom: 1px solid var(--border-color); padding-bottom: 10px; margin-top: 0; margin-bottom: 20px; }
+    
+    .table-responsive { overflow-x: auto; }
+    .table { width: 100%; border-collapse: collapse; background-color: var(--background-light); font-size: 14px; border-radius: 8px; overflow: hidden; }
+    .table th, .table td { text-align: left; padding: 12px 16px; border-bottom: 1px solid var(--border-color); }
+    .table thead { background-color: var(--border-color); color: var(--text-primary); }
+    .table tr:hover { background-color: #30363d; }
+    .table .badge { font-size: 0.8em; padding: 0.4em 0.7em; font-weight: 600; }
+    .bg-success { background-color: var(--success-color) !important; }
+    .bg-danger { background-color: var(--danger-color) !important; }
+    .bg-warning { background-color: var(--warning-color) !important; color: #111 !important; }
+
+    .chart-section { background-color: var(--background-light); border-radius: 12px; min-height: 400px; display: flex; align-items: center; justify-content: center; color: var(--text-secondary); padding: 10px; border: 1px solid var(--border-color); }
+    .chart-section > div { width: 100% !important; height: 100% !important; }
+    
+    .form-control, .form-select { background-color: var(--background-light); color: var(--text-primary); border-color: var(--border-color); padding: 10px 15px; }
+    .form-control:focus, .form-select:focus { background-color: #333; color: var(--text-primary); border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(35, 134, 54, 0.4); }
+    .btn-primary { background-color: var(--accent-color); border-color: var(--accent-color); font-weight: 700; padding: 10px 20px; }
+    .btn-primary:hover { background-color: var(--accent-hover); border-color: var(--accent-hover); }
+</style>
+</head>
+<body>
+<div class="dashboard-wrapper">
+    <nav class="sidebar" aria-label="Main navigation">
+        <h2>🪙 CRYPTO FORECAST</h2>
+        <ul>
+            <li><a href="{{ url_for('dashboard') }}">🏠 Home</a></li>
+            <li><a href="{{ url_for('error_analysis') }}">⚠️ Error Analysis</a></li>
+            <li><a href="{{ url_for('portfolio') }}">💼 Portfolio</a></li>
+            <li><a href="{{ url_for('watchlist') }}">👀 Watchlist</a></li>
+            <li><a href="{{ url_for('transactions') }}">💸 Transactions</a></li>
+            <li><a href="{{ url_for('analyzer') }}" class="active">📈 Analyzer</a></li>
+            <li><a href="{{ url_for('settings') }}">⚙️ Settings</a></li>
+            <li style="margin-top: auto;"><a href="{{ url_for('logout') }}">🚪 Logout</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-area">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>{% endfor %}{% endif %}
+        {% endwith %}
+
+        <div class="content-section">
+            <form method="POST" action="{{ url_for('analyzer') }}">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-9">
+                        <label for="coin_choice" class="form-label">Select Asset to Analyze</label>
+                        <select name="coin_choice" id="coin_choice" class="form-select">
+                            {% for c in user_coins %}
+                                <option value="{{ c }}" {% if c == coin %}selected{% endif %}>{{ c.capitalize() }}</option>
+                            {% else %}
+                                <option disabled>No traded coins found</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="col-md-3 d-grid">
+                        <button type="submit" class="btn btn-primary">Analyze Trades</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="content-section">
+            <h1>Trade Pattern Analysis for {{ coin.capitalize() }}</h1>
+            <p class="text-secondary">
+                This tool analyzes your past trades against historical market data to identify behavioral patterns. Hover over the markers on the chart for detailed insights.
+            </p>
+            
+            <div class="chart-section">
+                {% if chart %}
+                    {{ chart | safe }}
+                {% else %}
+                    <p>Could not generate analysis chart. Please ensure you have transactions for this asset.</p>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="content-section">
+            <h2>Detected Patterns Summary</h2>
+            <div class="table-responsive">
+                <table class="table table-dark table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Type</th>
+                            <th>Price (USD)</th>
+                            <th>Amount</th>
+                            <th>Detected Patterns</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% if trades %}
+                            {% for trade in trades %}
+                            <tr>
+                                <td>{{ trade.date.strftime('%Y-%m-%d') }}</td>
+                                <td style="color: {{ '#2ECC71' if trade.type == 'buy' else '#E74C3C' }}; font-weight: bold;">
+                                    {{ trade.type | capitalize }}
+                                </td>
+                                <td>${{ "{:,.2f}".format(trade.price) }}</td>
+                                <td>{{ trade.amount }}</td>
+                                <td>
+                                    {% for pattern, p_type in trade.patterns %}
+                                        <span class="badge bg-{{ p_type }}">{{ pattern }}</span>
+                                    {% else %}
+                                        <span class="text-secondary">None</span>
+                                    {% endfor %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        {% else %}
+                            <tr><td colspan="5" class="text-center text-muted" style="text-align: center;">No trades to analyze for this coin.</td></tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
+

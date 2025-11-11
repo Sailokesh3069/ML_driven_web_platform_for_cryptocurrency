@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<title>Crypto Forecast Dashboard</title>
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+<style>
+    /* --- 1. THEME & GLOBAL STYLES --- */
+    :root {
+        --background-dark: #0d1117;
+        --background-light: #161b22;
+        --background-card: #21262d;
+        --text-primary: #e6edf3;
+        --text-secondary: #8b949e;
+        --accent-color: #238636;
+        --accent-hover: #2ea043;
+        --border-color: #30363d;
+        /* Coin Brand Colors */
+        --btc-color: #F7931A; --btc-glow: rgba(247, 147, 26, 0.4);
+        --eth-color: #627EEA; --eth-glow: rgba(98, 126, 234, 0.4);
+        --ltc-color: #A6A9AA; --ltc-glow: rgba(190, 190, 190, 0.4);
+        --xrp-color: #23292F; --xrp-glow: rgba(35, 41, 47, 0.4);
+        --ada-color: #0033AD; --ada-glow: rgba(0, 51, 173, 0.4);
+        --sol-color: #9945FF; --sol-glow: rgba(153, 69, 255, 0.4);
+    }
+
+    body, html {
+        margin: 0; padding: 0;
+        font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+        background-color: var(--background-dark);
+        color: var(--text-primary);
+        height: 100%;
+        overflow: hidden;
+    }
+
+    /* --- 2. LAYOUT & SIDEBAR --- */
+    .dashboard-wrapper { display: flex; height: 100vh; }
+    .sidebar { width: 240px; background-color: var(--background-light); padding: 25px 15px; border-right: 1px solid var(--border-color); display: flex; flex-direction: column; flex-shrink: 0; }
+    .sidebar h2 { font-size: 20px; margin: 0 0 30px 0; text-align: center; color: var(--text-primary); font-weight: 600; }
+    .sidebar ul { list-style: none; padding: 0; margin: 0; flex-grow: 1; }
+    .sidebar a { color: var(--text-secondary); text-decoration: none; font-weight: 500; display: flex; align-items: center; gap: 12px; padding: 12px 15px; border-radius: 8px; transition: all 0.2s ease; }
+    .sidebar a:hover { background-color: #30363d; color: var(--text-primary); }
+    .sidebar a.active { background-color: var(--accent-color); color: white; font-weight: 600; }
+    
+    .main-area { flex: 1; display: flex; flex-direction: column; padding: 25px 35px; overflow-y: auto; height: 100vh; }
+
+    /* --- 3. UI COMPONENTS --- */
+    .flash { padding: 12px 15px; margin-bottom: 20px; border-radius: 8px; font-weight: 600; flex-shrink: 0; }
+    .metrics-container { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 25px; flex-shrink: 0; }
+    .metric-card { background-color: var(--background-card); padding: 15px 20px; border-radius: 8px; border: 1px solid var(--border-color); text-align: center; flex-grow: 1; min-width: 140px; }
+    .metric-card h4 { margin: 0 0 8px 0; color: var(--text-secondary); font-weight: 600; font-size: 13px; text-transform: uppercase; }
+    .metric-card p { margin: 0; font-size: 18px; font-weight: 700; color: var(--text-primary); }
+    .content-section { background-color: var(--background-light); padding: 25px; border-radius: 12px; border: 1px solid var(--border-color); box-shadow: 0 4px 12px rgba(0,0,0,0.2); flex-grow: 1; display: flex; flex-direction: column; min-height: 400px; }
+    .content-section > div { width: 100%; height: 100%; }
+
+    /* --- 4. REAL-WORLD CONTROLS BAR --- */
+    .controls-bar { background-color: var(--background-card); padding: 30px; border-radius: 12px; margin-bottom: 25px; border: 1px solid var(--border-color); flex-shrink: 0; }
+    .control-group label { font-size: 14px; font-weight: 600; margin-bottom: 10px; color: var(--text-secondary); display: block; }
+    .form-control, .form-select { background-color: var(--background-light); color: var(--text-primary); border-color: var(--border-color); padding: 10px 15px; }
+    .form-control:focus, .form-select:focus { background-color: #333; color: var(--text-primary); border-color: var(--accent-color); box-shadow: 0 0 0 3px rgba(35, 134, 54, 0.4); }
+    .form-check-input:checked { background-color: var(--accent-color); border-color: var(--accent-color); }
+    .btn-primary { background-color: var(--accent-color); border-color: var(--accent-color); font-weight: 700; padding: 12px; transition: all 0.2s ease; }
+    .btn-primary:hover { background-color: var(--accent-hover); border-color: var(--accent-hover); transform: translateY(-2px); box-shadow: 0 4px 15px rgba(35, 134, 54, 0.5); }
+    
+    .coin-selector { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 15px; }
+    
+    .coin-card {
+        background: linear-gradient(145deg, #2f353a, #272c31);
+        border: 1px solid #444;
+        border-radius: 12px;
+        padding: 15px;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        cursor: pointer;
+        text-decoration: none;
+        position: relative;
+        box-shadow: 0 4px 8px rgba(0,0,0,0.4), inset 0 1px 1px rgba(255,255,255,0.05);
+        transition: all 0.15s ease-out;
+    }
+    .coin-card:hover { transform: translateY(-3px); box-shadow: 0 6px 12px rgba(0,0,0,0.5), inset 0 1px 1px rgba(255,255,255,0.05); }
+    .coin-card:active { transform: translateY(1px); box-shadow: 0 2px 4px rgba(0,0,0,0.4), inset 0 2px 4px rgba(0,0,0,0.3); }
+    
+    .coin-card svg { width: 32px; height: 32px; filter: drop-shadow(0 2px 3px rgba(0,0,0,0.5)); }
+    .coin-card .coin-info { display: flex; flex-direction: column; }
+    .coin-card .coin-name { font-size: 1rem; font-weight: 600; color: var(--text-primary); line-height: 1.2; }
+    .coin-card .coin-ticker { font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; }
+    
+    .coin-card.active { box-shadow: 0 2px 5px rgba(0,0,0,0.5), inset 0 3px 6px rgba(0,0,0,0.4); transform: translateY(1px); }
+    .coin-card.active.bitcoin { border-color: var(--btc-color); }
+    .coin-card.active.ethereum { border-color: var(--eth-color); }
+    .coin-card.active.litecoin { border-color: var(--ltc-color); }
+    .coin-card.active.ripple { border-color: var(--xrp-color); }
+    .coin-card.active.cardano { border-color: var(--ada-color); }
+    .coin-card.active.solana { border-color: var(--sol-color); }
+
+    /* --- 5. LOADING SPINNER --- */
+    #loading-spinner { display: none; position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); border: 8px solid #f3f3f3; border-top: 8px solid var(--accent-color); border-radius: 50%; width: 60px; height: 60px; animation: spin 1s linear infinite; z-index: 1000; }
+    @keyframes spin { 0% { transform: translate(-50%, -50%) rotate(0deg); } 100% { transform: translate(-50%, -50%) rotate(360deg); } }
+</style>
+</head>
+<body>
+
+<div id="loading-spinner"></div>
+
+<div class="dashboard-wrapper">
+    <nav class="sidebar" aria-label="Main navigation">
+        <h2>🪙 CRYPTO FORECAST</h2>
+        <ul>
+            <li><a href="{{ url_for('dashboard') }}" class="active">🏠 Home</a></li>
+            <li><a href="{{ url_for('error_analysis') }}">⚠️ Error Analysis</a></li>
+            <li><a href="{{ url_for('portfolio') }}">💼 Portfolio</a></li>
+            <li><a href="{{ url_for('watchlist') }}">👀 Watchlist</a></li>
+            <li><a href="{{ url_for('transactions') }}">💸 Transactions</a></li>
+            <li><a href="{{ url_for('analyzer') }}">📈 Analyzer</a></li>
+            <li><a href="{{ url_for('settings') }}">⚙️ Settings</a></li>
+            <li style="margin-top: auto;"><a href="{{ url_for('logout') }}">🚪 Logout</a></li>
+        </ul>
+    </nav>
+
+    <main class="main-area">
+        
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}{% for category, message in messages %}<div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">{{ message }}<button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button></div>{% endfor %}{% endif %}
+        {% endwith %}
+        
+        <div class="controls-bar">
+            <form method="POST" action="{{ url_for('dashboard') }}" id="forecast-form">
+                <input type="hidden" name="coin" id="selected-coin-input" value="{{ selected_coin }}">
+                
+                <div class="row g-4">
+                    <!-- Left Column: Coin Selection -->
+                    <div class="col-lg-7">
+                        <div class="control-group">
+                            <label>1. Select Asset</label>
+                            <div class="coin-selector">
+                                <a href="#" class="coin-card bitcoin {% if 'bitcoin' == selected_coin %}active{% endif %}" data-coin="bitcoin">
+                                    <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Bitcoin</title><path fill="#F7931A" d="M11.522 23.954c-6.83 0-11.522-4.673-11.522-11.977C0 4.673 4.692 0 11.522 0c6.83 0 11.522 4.673 11.522 11.977 0 7.304-4.692 11.977-11.522 11.977zM11.522 1.34c-5.46 0-9.92 4.195-9.92 10.637 0 6.442 4.46 10.637 9.92 10.637 5.46 0 9.92-4.195 9.92-10.637C21.442 5.535 16.982 1.34 11.522 1.34zM9.014 7.618h5.95v2.852H9.014zM9.014 13.53h5.95v2.852H9.014zM6.518 10.536h2.43v5.87H6.518zM14.027 10.536h2.43v5.87h-2.43zM8.36 5.535h6.12v2.02h-6.12zM8.36 16.445h6.12v2.02h-6.12z"/></svg>
+                                    <div class="coin-info"><span class="coin-name">Bitcoin</span><span class="coin-ticker">BTC</span></div>
+                                </a>
+                                <a href="#" class="coin-card ethereum {% if 'ethereum' == selected_coin %}active{% endif %}" data-coin="ethereum">
+                                    <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Ethereum</title><path fill="#627EEA" d="M12 0L1.75 9.75l10.25 4.25 10.25-4.25L12 0zm0 24l10.25-9.75-10.25-4.25-10.25 4.25L12 24z"/></svg>
+                                    <div class="coin-info"><span class="coin-name">Ethereum</span><span class="coin-ticker">ETH</span></div>
+                                </a>
+                                <a href="#" class="coin-card litecoin {% if 'litecoin' == selected_coin %}active{% endif %}" data-coin="litecoin">
+                                    <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Litecoin</title><path fill="#A6A9AA" d="M12 0C5.372 0 0 5.373 0 12s5.372 12 12 12 12-5.373 12-12S18.628 0 12 0zm4.58 16.51l-6.183 2.41L7.5 17.02l6.237-2.433.843-3.298-3.08-1.204.6-2.35 3.027 1.203L16.48 3.5h-3.41L12.01 9.29l-1.39- .544.6-2.35H7.8l-1.4 5.46 4.41 1.723-1.24 4.848-4.42-1.724L4.02 14.5h3.33l.4-1.564-4.41-1.722.9-3.513h3.5l.4 1.563 1.39.543-.59 2.306 4.35 1.7-1.12 4.383z"/></svg>
+                                    <div class="coin-info"><span class="coin-name">Litecoin</span><span class="coin-ticker">LTC</span></div>
+                                </a>
+                                <a href="#" class="coin-card ripple {% if 'ripple' == selected_coin %}active{% endif %}" data-coin="ripple">
+                                    <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>XRP</title><path fill="#23292F" d="M12 0C5.372 0 0 5.373 0 12s5.372 12 12 12 12-5.373 12-12S18.628 0 12 0zm.66 4.935c1.47 0 2.663 1.196 2.663 2.662 0 1.468-1.194 2.663-2.663 2.663-1.468 0-2.662-1.195-2.662-2.663s1.194-2.662 2.662-2.662zm.172 14.13c-1.47 0-2.662-1.195-2.662-2.662s1.193-2.663 2.662-2.663c1.47 0 2.663 1.196 2.663 2.663s-1.193 2.662-2.663 2.662zM5.53 11.232c0-1.468 1.195-2.663 2.662-2.663 1.47 0 2.663 1.195 2.663 2.663 0 1.47-1.193 2.663-2.663 2.663-1.467 0-2.662-1.193-2.662-2.663zm10.278 0c0-1.468 1.196-2.663 2.663-2.663 1.468 0 2.662 1.195 2.662 2.663 0 1.47-1.194 2.663-2.662 2.663-1.467 0-2.663-1.193-2.663-2.663z"/></svg>
+                                    <div class="coin-info"><span class="coin-name">Ripple</span><span class="coin-ticker">XRP</span></div>
+                                </a>
+                                <a href="#" class="coin-card cardano {% if 'cardano' == selected_coin %}active{% endif %}" data-coin="cardano">
+                                     <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Cardano</title><path fill="#0033AD" d="M21.94 10.375a.465.465 0 00-.23-.424l-8.995-5.214a.465.465 0 00-.465 0L3.255 9.95a.465.465 0 00-.23.424v1.07a.465.465 0 00.08.28l8.91 10.45a.465.465 0 00.62 0l8.91-10.45a.465.465 0 00.08-.28zm-9.31 9.42l-7.55-8.83 7.55 4.37zm-.62-10.31L4.46 5.095l7.55 4.37zm1.24 0l7.55-4.39-7.55 4.39zm.62 10.31l7.55-8.83-7.55 4.37zm-4.32-2.5l3.08 1.785 3.08-1.785v-3.57l-3.08-1.785-3.08 1.785z"/></svg>
+                                    <div class="coin-info"><span class="coin-name">Cardano</span><span class="coin-ticker">ADA</span></div>
+                                </a>
+                                <a href="#" class="coin-card solana {% if 'solana' == selected_coin %}active{% endif %}" data-coin="solana">
+                                    <svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><title>Solana</title><path fill="#9945FF" d="M18.81 4.14H5.19a1.05 1.05 0 00-1.05 1.05v2.812a1.05 1.05 0 001.05 1.05h13.62a1.05 1.05 0 001.05-1.05V5.19a1.05 1.05 0 00-1.05-1.05zm-13.62 9h13.62a1.05 1.05 0 001.05-1.05v-2.812a1.05 1.05 0 00-1.05-1.05H5.19a1.05 1.05 0 00-1.05 1.05v2.812a1.05 1.05 0 001.05 1.05zm0 8.718h13.62a1.05 1.05 0 001.05-1.05V18a1.05 1.05 0 00-1.05-1.05H5.19a1.05 1.05 0 00-1.05 1.05v2.812a1.05 1.05 0 001.05 1.05z"/></svg>
+                                    <div class="coin-info"><span class="coin-name">Solana</span><span class="coin-ticker">SOL</span></div>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right Column: Parameters & Actions -->
+                    <div class="col-lg-5">
+                        <div class="control-group mb-3">
+                            <label>2. Configure Forecast</label>
+                            <div class="row g-3">
+                                <div class_name="col-6"><input type="number" name="days" value="{{ selected_days }}" class="form-control" title="History (days)"></div>
+                                <div class_name="col-6"><select name="horizon" class="form-select" title="Forecast Horizon"><option value="7" {% if selected_horizon == 7 %}selected{% endif %}>7 Days</option><option value="14" {% if selected_horizon == 14 %}selected{% endif %}>14 Days</option><option value="30" {% if selected_horizon == 30 %}selected{% endif %}>30 Days</option></select></div>
+                            </div>
+                        </div>
+                        <div class="control-group">
+                            <label for="model_choice">Model</label>
+                            <select name="model_choice" id="model_choice" class="form-select">
+                                <option value="xgboost" {% if selected_model == 'xgboost' %}selected{% endif %}>XGBoost (Advanced)</option>
+                                <option value="arima" {% if selected_model == 'arima' %}selected{% endif %}>ARIMA (Statistical)</option>
+                            </select>
+                        </div>
+                        <div class="form-check form-switch my-3">
+                            <input class="form-check-input" type="checkbox" name="tune_model" id="tune_model" {% if tune_model %}checked{% endif %}>
+                            <label class="form-check-label" for="tune_model">Enable High Accuracy Tuning</label>
+                        </div>
+                        <div class="d-grid">
+                            <button type="submit" class="btn btn-primary btn-lg">Run Forecast</button>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="metrics-container">
+            <div class="metric-card"><h4>Current Price</h4><p>${{ "{:,.2f}".format(metrics_initial.current_price) if metrics_initial.current_price else 'N/A' }}</p></div>
+            <div class="metric-card"><h4>Market Cap</h4><p>${{ "{:,.0f}".format(metrics_initial.market_cap) if metrics_initial.market_cap else 'N/A' }}</p></div>
+            <div class="metric-card"><h4>24h Volume</h4><p>${{ "{:,.0f}".format(metrics_initial.volume) if metrics_initial.volume else 'N/A' }}</p></div>
+            {% if metrics %}
+            <div class="metric-card"><h4>Test MSE</h4><p>{{ "{:,.6f}".format(metrics.mse) if metrics.mse != 'N/A' else 'N/A' }}</p></div>
+            <div class="metric-card"><h4>Test MAE</h4><p>{{ "{:,.6f}".format(metrics.mae) if metrics.mae != 'N/A' else 'N/A' }}</p></div>
+            {% endif %}
+        </div>
+
+        <div class="content-section">
+            {% if error %}<p class="text-danger">⚠️ {{ error }}</p>{% elif chart %}{{ chart | safe }}{% else %}<p>No forecast plotted yet. Choose your options and click "Forecast" to begin.</p>{% endif %}
+        </div>
+    </main>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const form = document.getElementById('forecast-form');
+        const spinner = document.getElementById('loading-spinner');
+        form.addEventListener('submit', () => spinner.style.display = 'block');
+
+        const coinCards = document.querySelectorAll('.coin-card');
+        const hiddenInput = document.getElementById('selected-coin-input');
+        coinCards.forEach(card => {
+            card.addEventListener('click', e => {
+                e.preventDefault(); 
+                coinCards.forEach(c => c.classList.remove('active'));
+                card.classList.add('active');
+                hiddenInput.value = card.getAttribute('data-coin');
+            });
+        });
+    });
+</script>
+</body>
+</html>
+
